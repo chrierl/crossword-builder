@@ -1,0 +1,66 @@
+#toolbar {
+  margin-bottom: 10px;
+}
+#grid {
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+#grid tr {
+  height: 40px;
+  max-height: 40px;
+}
+#grid td {
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  max-width: 40px;
+  min-height: 40px;
+  max-height: 40px;
+  border: 1px solid black;
+  text-align: center;
+  cursor: pointer;
+  font-family: 'Patrick Hand SC', cursive;
+  font-size: 18px;
+  text-transform: uppercase;
+  overflow: hidden;
+  white-space: normal;
+  word-break: break-word;
+  box-sizing: border-box;
+}
+.not_set { background: #d3d3d3; }
+.clue { background: lightblue; }
+.solution { background: white; }
+.arrow { background: yellow; }
+.arrow { font-size: 18px; } /* Ensure arrows use same font size */
+.blocked { background: black; }
+.image { background: gray; background-size: cover; }
+.merged { display: none; }
+.selected { border: 2px solid red !important; }
+.multi-selected { background-color: rgba(255, 0, 0, 0.2) !important; }
+#cellInfo {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid #ccc;
+  max-width: 600px;
+}
+#cellInfo form div {
+  margin-bottom: 10px;
+}
+#cellInfo input, #cellInfo textarea {
+  margin-left: 5px;
+  font-family: 'Patrick Hand SC', cursive;
+  text-transform: uppercase;
+}
+#cellInfo button {
+  margin-top: 10px;
+}
+#cellInfo .dir-btn.selected {
+  background-color: lightgreen;
+}
+#cellInfo .arrow-btn {
+  font-size: 20px;
+  margin: 5px;
+}
+#cellInfo .arrow-btn.selected {
+  background-color: lightgreen;
+}
