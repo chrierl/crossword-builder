@@ -41,7 +41,8 @@ let isMultiSelecting = false;
 let multiSelectedCells = [];
 
 // Octokit for GitHub
-const octokit = new Octokit({ auth: 'your-pat-here' }); // Replace with your Personal Access Token
+const octokit = new Octokit({ auth: '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' });
+
 
 function initGrid() {
   grid = Array.from({length: rows}, () => Array.from({length: cols}, () => ({type: 'not_set'})));
@@ -609,7 +610,7 @@ function saveImageChanges() {
 async function saveToGitHub() {
   const json = JSON.stringify({rows, cols, grid});
   const content = btoa(json);
-  const repo = 'your-username/your-repo'; // Replace with your repo
+  const repo = 'chrierl/crossword-builder'; // Replace with your repo
   const path = 'crosswords/my-puzzle.json';
   try {
     const {data: current} = await octokit.request('GET /repos/{owner}/{repo}/contents/{path}', {
