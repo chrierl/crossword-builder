@@ -454,6 +454,68 @@ function updateClueInputs() {
   displayCellInfo(); // Refresh inputs
 }
 
+function calculateTargets(startRow, startCol, direction, length) {
+  const targets = [];
+  let current = [startRow, startCol];
+  if (direction === 'across') {
+    current[1]++;
+  } else {
+    current[0]++;
+  }
+  for (let k = 0; k < length; k++) {
+    const tr = current[0];
+    const tc = current[1];
+    targets.push({row: tr, col: tc});
+    if (direction === 'across') current[1]++;
+    else current[0]++;
+  }
+  return targets;
+}
+
+function isCellInOtherClue(row, col, currentClueCell) {
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.type === 'clue' && cell !== currentClueCell && cell.clues) {
+        for (let clue of cell.clues) {
+          if (!clue.targets) {
+            clue.targets = calculateTargets(r, c, clue.direction, clue.solution.length);
+          }
+          if (clue.targets.some(t => t.row === row && t.col === col)) {
+            return true;
+          }
+        }
+      }
+    }
+  }
+  return false;
+}
+
+function getConflictingClues(row, col, currentClueCell) {
+  const conflictingClues = [];
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = grid[r][c];
+      if (cell.type === 'clue' && cell !== currentClueCell && cell.clues) {
+        cell.clues.forEach((clue, i) => {
+          if (!clue.targets) {
+            clue.targets = calculateTargets(r, c, clue.direction, clue.solution.length);
+          }
+          if (clue.targets.some(t => t.row === row && t.col === col)) {
+            conflictingClues.push({
+              clueCellRow: r,
+              clueCellCol: c,
+              clueIndex: i + 1,
+              clueText: clue.text
+            });
+          }
+        });
+      }
+    }
+  }
+  return conflictingClues;
+}
+
 function saveClueChanges() {
   const cell = grid[selectedRow][selectedCol];
   const texts = document.querySelectorAll('.clue-text');
@@ -498,10 +560,6 @@ function saveClueChanges() {
         allValid = false;
         break;
       }
-      if (tcell.type === 'solution' && tcell.letter && tcell.letter !== clue.solution.charAt(k)) {
-        allValid = false;
-        break;
-      }
       targets.push({row: tr, col: tc, letter: clue.solution.charAt(k)});
       if (clue.direction === 'across') current[1]++;
       else current[0]++;
@@ -511,19 +569,66 @@ function saveClueChanges() {
   }
 
   if (!allValid) {
-    alert('Solution does not fit: Runs off grid, into invalid cell types, or conflicts with existing letters.');
+    alert('Solution does not fit: Runs off grid or into invalid cell types.');
     return;
   }
 
-  // Apply all
+  // Check for conflicts and warn
+  let conflicts = [];
+  for (let clue of tempClues) {
+    for (let tgt of clue.targets) {
+      if (grid[tgt.row][tgt.col].type === 'solution' && grid[tgt.row][tgt.col].letter !== tgt.letter) {
+        const conflictingClues = getConflictingClues(tgt.row, tgt.col, cell);
+        if (conflictingClues.length > 0) {
+          conflicts.push({target: tgt, conflictingClues});
+        }
+      }
+    }
+  }
+
+  if (conflicts.length > 0) {
+    let warningMsg = 'Modifying this clue will alter letters in other clues:\n';
+    conflicts.forEach(conflict => {
+      conflict.conflictingClues.forEach(confClue => {
+        warningMsg += `Cell (${String.fromCharCode(65 + conflict.target.col)}${conflict.target.row + 1}) is part of Clue ${confClue.clueIndex} at (${String.fromCharCode(65 + confClue.clueCellCol)}${confClue.clueCellRow + 1}): "${confClue.clueText}"\n`;
+      });
+    });
+    warningMsg += 'Continue?';
+    if (!confirm(warningMsg)) {
+      return;
+    }
+  }
+
+  // Handle shortening: reset extra cells if not part of other clues
+  cell.clues.forEach((oldClue, i) => {
+    const oldLength = oldClue.solution.length;
+    const newLength = tempClues[i].solution.length;
+    if (oldLength > newLength) {
+      let oldTargets = oldClue.targets || calculateTargets(selectedRow, selectedCol, oldClue.direction, oldLength);
+      const removedTargets = oldTargets.slice(newLength);
+      removedTargets.forEach(tgt => {
+        if (!isCellInOtherClue(tgt.row, tgt.col, cell)) {
+          grid[tgt.row][tgt.col].type = 'not_set';
+          delete grid[tgt.row][tgt.col].letter;
+        }
+      });
+    }
+  });
+
+  // Apply all (overwrite letters)
   for (let clue of tempClues) {
     for (let tgt of clue.targets) {
       grid[tgt.row][tgt.col] = {type: 'solution', letter: tgt.letter};
     }
   }
 
-  // Save to cell.clues
-  cell.clues = tempClues.map(cl => ({text: cl.text, direction: cl.direction, solution: cl.solution}));
+  // Save to cell.clues with targets (positions only)
+  cell.clues = tempClues.map(cl => ({
+    text: cl.text,
+    direction: cl.direction,
+    solution: cl.solution,
+    targets: cl.targets.map(t => ({row: t.row, col: t.col}))
+  }));
 
   renderGrid();
   displayCellInfo();
